@@ -559,7 +559,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 
 // enterNewRound(height, 0) at cs.StartTime.
 func (cs *State) scheduleRound0(rs *cstypes.RoundState) {
-	// cs.Logger.Info("scheduleRound0", "now", cmttime.Now(), "startTime", cs.StartTime)
+	cs.Logger.Info("scheduleRound0", "now", cmttime.Now(), "startTime", cs.StartTime)
 	sleepDuration := rs.StartTime.Sub(cmttime.Now())
 	cs.scheduleTimeout(sleepDuration, rs.Height, 0, cstypes.RoundStepNewHeight)
 }
@@ -892,15 +892,17 @@ func (cs *State) handleMsg(mi msgInfo) {
 	)
 
 	msg, peerID := mi.Msg, mi.PeerID
-
+	cs.Logger.Info("handleMsg")
 	switch msg := msg.(type) {
 	case *ProposalMessage:
 		// will not cause transition.
 		// once proposal is set, we can receive block parts
+		cs.Logger.Info("handleMsg ProposalMessage")
 		err = cs.setProposal(msg.Proposal, mi.ReceiveTime)
 
 	case *BlockPartMessage:
 		// if the proposal is complete, we'll enterPrevote or tryFinalizeCommit
+		cs.Logger.Info("handleMsg BlockPartMessage")
 		added, err = cs.addProposalBlockPart(msg, peerID)
 
 		// We unlock here to yield to any routines that need to read the RoundState.
@@ -937,6 +939,7 @@ func (cs *State) handleMsg(mi msgInfo) {
 	case *VoteMessage:
 		// attempt to add the vote and dupeout the validator if its a duplicate signature
 		// if the vote gives us a 2/3-any or 2/3-one, we transition
+		cs.Logger.Info("handleMsg VoteMessage")
 		added, err = cs.tryAddVote(msg.Vote, peerID)
 		if added {
 			cs.statsMsgQueue <- mi
@@ -1762,6 +1765,8 @@ func (cs *State) enterCommit(height int64, commitRound int32) {
 		cs.newStep()
 
 		// Maybe finalize immediately.
+		logger.Info(
+			"Calling tryFinalizeCommit")
 		cs.tryFinalizeCommit(height)
 	}()
 
@@ -1841,6 +1846,9 @@ func (cs *State) finalizeCommit(height int64) {
 		)
 		return
 	}
+
+	logger.Info(
+		"Finalizing I am here")
 
 	cs.calculatePrevoteMessageDelayMetrics()
 
